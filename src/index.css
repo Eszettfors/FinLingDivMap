@@ -1,0 +1,166 @@
+:root {
+  /* ---- Color tokens ---- */
+  --paper: #eef2ef;
+  --surface: #ffffff;
+  --surface-sunk: #e3e9e5;
+  --ink: #16241f;
+  --ink-soft: #46534d;
+  --ink-faint: #7b8983;
+  --line: #cbd5cd;
+  --line-strong: #a9b8ae;
+
+  --accent-lake: #1f6e8c;
+  --accent-lake-soft: #dbe9ee;
+  --accent-berry: #a8354b;
+  --accent-berry-soft: #f2dee2;
+  --accent-birch: #b5822b;
+  --accent-birch-soft: #f1e5cc;
+  --accent-spruce: #2f6b4f;
+
+  /* language-family legend colors, echo the source dataset's own scheme */
+  --lang-sami: #2361a6;
+  --lang-finnish: #c62828;
+  --lang-swedish: #d9a900;
+
+  /* ---- Type tokens ---- */
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --font-body:  --sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-weight: 500;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  margin: 0;
+  color: var(--ink);
+  font-size: 32px;
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  margin: 0;
+  color: var(--ink);
+  font-size: 24px;
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+  text-decoration: underline;
+}
+
+h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+
+p {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--ink);
+}
+
+button, select, input {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--accent-lake);
+}
+
+/* Visible focus ring for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--accent-lake);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--accent-birch-soft);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  font-size: 11px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+/* Leaflet container overrides so the map fits the app's quiet palette */
+.leaflet-container {
+  background: var(--surface-sunk);
+  font-family: var(--font-body);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-tooltip {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 18px rgba(22, 36, 31, 0.28);
+}
+
+.leaflet-tooltip {
+  font-size: 12px;
+  padding: 4px 8px;
+  border: none;
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: var(--ink);
+}
+
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.75) !important;
+  font-size: 10px !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
