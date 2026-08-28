@@ -64,7 +64,3 @@ public/
   geo/                  simplified municipality GeoJSON (WGS84)
 ```
 
-## Attribution
-
-Dataset by Hannes Essfors — see the in-app "About" tab for the full citation
-and license (CC BY 4.0). Map tiles: © OpenStreetMap contributors, © CARTO.

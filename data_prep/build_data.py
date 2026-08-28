@@ -1,4 +1,5 @@
 import csv, json, os, sys
+from collections import defaultdict
 
 # Usage: python3 data_prep/build_data.py [path/to/FinLingDiv/data/processed]
 # Defaults to a sibling ../FinLingDiv/data/processed if not given, and
@@ -137,9 +138,3 @@ print("municipalities:", len(municipalities))
 print("years:", years[0], "-", years[-1])
 print("ever-dominant languages:", len(ever_dominant), ever_dominant)
 print("families:", len(families))
-
-# NOTE: run this after generating a WGS84-simplified GeoJSON from the
-# municipality shapefile, e.g. with mapshaper:
-#   mapshaper data/geodata/kunta4500k_2022Polygon.shp \
-#     -proj wgs84 -simplify dp 8% keep-shapes -clean \
-#     -o public/geo/municipalities.geojson format=geojson precision=0.0001
