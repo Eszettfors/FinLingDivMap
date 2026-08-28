@@ -1,7 +1,11 @@
 # FinLingDiv Map
 
 A static React + Leaflet port of the [FinLingDiv-Dashboard](https://f39e09-hannes-essfors.shinyapps.io/FinLingDiv/) using Claude Sonnet 5.
-The underlying data is based on [FinLingDiv](https://zenodo.org/records/18257720).
+The underlying data is based on [FinLingDiv](https://zenodo.org/records/18257720), which in term is based on Statistics Finland. The data is 
+CC BY 4.0
+
+This software, i.e., the code underlying the webpage is GPLv3.
+
 
 ## Data
 
