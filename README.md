@@ -1,11 +1,11 @@
 # FinLingDiv Map
 
 A static React + Leaflet port of the [FinLingDiv-Dashboard](https://f39e09-hannes-essfors.shinyapps.io/FinLingDiv/) using Claude Sonnet 5.
-The underlying data is based on [FinLingDiv](https://zenodo.org/records/18257720). The port was mainly done
+The underlying data is based on [FinLingDiv](https://zenodo.org/records/18257720), which in term is based on Statistics Finland. The data is 
+CC BY 4.0
 
-Built with Vite, React, react-leaflet, and D3 (scales/shapes/hierarchy only —
-no dashboard framework or backend). All data is pre-processed into static
-JSON/GeoJSON files served straight from GitHub Pages.
+This software, i.e., the code underlying the webpage is GPLv3.
+
 
 ## Data
 
