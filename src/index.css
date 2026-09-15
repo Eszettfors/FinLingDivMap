@@ -3,8 +3,8 @@
   --paper: #eef2ef;
   --surface: #ffffff;
   --surface-sunk: #e3e9e5;
-  --ink: #002F6C;
-  --ink-soft: #46534d;
+  --ink: #000408;
+  --ink-soft: #303633;
   --ink-faint: #7b8983;
   --line: #cbd5cd;
   --line-strong: #a9b8ae;
@@ -24,7 +24,7 @@
 
   /* ---- Type tokens ---- */
   --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
-  --font-body:  --sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-body: Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
 
   --radius-sm: 4px;
