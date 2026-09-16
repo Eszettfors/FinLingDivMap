@@ -63,6 +63,13 @@ export default function AboutView() {
             doi.org/10.63744/srhQaCwGo5mj
           </a>
         </p>
+        <h3>Contact</h3>
+        <p>
+          Feel free to reach out to any of the email-adresses if you have quesitons about the dashboard or the data:
+          <p> hannes.essfors@tuwien.ac.at</p>
+           <p>hannes.essfors@univie.ac.at</p>
+           <p> hannes.essfors@gmail.com </p>
+        </p>
 
       </article>
     </div>
