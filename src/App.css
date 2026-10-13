@@ -326,6 +326,32 @@
   color: var(--ink);
 }
 
+.treemap {
+  position: relative;
+}
+
+.treemap__tooltip {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 9px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(22, 36, 31, 0.28);
+}
+
+.treemap__tooltip-family {
+  opacity: 0.7;
+  font-size: 11px;
+}
+
 .treemap__note {
   font-size: 14px;
   color: var(--ink);
