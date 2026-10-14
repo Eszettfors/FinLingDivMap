@@ -2,41 +2,102 @@ import csv, json, os, sys
 from collections import defaultdict
 
 # Usage: python3 data_prep/build_data.py [path/to/FinLingDiv/data/processed]
-# Defaults to a sibling ../FinLingDiv/data/processed if not given, and
-# writes straight into public/data/ (relative to this script's project root).
+# If no path is given, looks for FinLingDiv/data/processed inside the project
+# and then next to it. Writes straight into public/data/.
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..", "..", "FinLingDiv", "data", "processed")
-OUT = os.path.join(HERE, "..", "public", "data")
+ROOT = os.path.join(HERE, "..")
+
+
+def find_src():
+    if len(sys.argv) > 1:
+        return sys.argv[1]
+    for candidate in (
+        os.path.join(ROOT, "FinLingDiv", "data", "processed"),
+        os.path.join(ROOT, "..", "FinLingDiv", "data", "processed"),
+    ):
+        if os.path.isdir(candidate):
+            return candidate
+    sys.exit("Could not find FinLingDiv/data/processed - pass its path as an argument.")
+
+
+SRC = find_src()
+OUT = os.path.join(ROOT, "public", "data")
+GEO = os.path.join(ROOT, "public", "geo")
 os.makedirs(OUT, exist_ok=True)
 
+
+def write_json(name, obj):
+    with open(os.path.join(OUT, name), "w") as f:
+        json.dump(obj, f, separators=(",", ":"))
+
+
 # ---------- 1. Languages master list (name -> family) ----------
+# Shared by every geographic level, so a langIdx means the same language
+# in the municipal, regional and national files.
 lang_family = {}
 with open(f"{SRC}/full_time_series_speakers.csv") as f:
-    r = csv.DictReader(f)
-    for row in r:
+    for row in csv.DictReader(f):
         lang_family[row['language']] = row['family_name']
 
 lang_names = sorted(lang_family.keys())
 lang_index = {name: i for i, name in enumerate(lang_names)}
 languages_json = [{"name": n, "family": lang_family[n]} for n in lang_names]
+write_json("languages.json", languages_json)
 
-with open(f"{OUT}/languages.json", "w") as f:
-    json.dump(languages_json, f, separators=(",", ":"))
 
-# ---------- 2. Per-municipality per-year language speakers ----------
-# structure: { municipality: { year: [[langIdx, speakers], ...] } }
-muni_lang = defaultdict(lambda: defaultdict(list))
-with open(f"{SRC}/full_time_series_speakers.csv") as f:
-    r = csv.DictReader(f)
-    for row in r:
-        m = row['municipality']
-        y = row['year']
-        li = lang_index[row['language']]
-        sp = int(float(row['speakers']))
-        muni_lang[m][y].append([li, sp])
+# ---------- helpers shared by the municipal and regional levels ----------
+def read_speakers(path, area_col):
+    """-> { area: { year: [[langIdx, speakers], ...] } }"""
+    out = defaultdict(lambda: defaultdict(list))
+    with open(path) as f:
+        for row in csv.DictReader(f):
+            if row['language'] not in lang_index:
+                sys.exit(f"Language '{row['language']}' in {path} is not in the master language list.")
+            sp = int(float(row['speakers']))
+            out[row[area_col]][row['year']].append([lang_index[row['language']], sp])
+    return out
 
-with open(f"{OUT}/languages_by_municipality.json", "w") as f:
-    json.dump(muni_lang, f, separators=(",", ":"))
+
+def compute_dominant(area_lang):
+    """-> { area: { year: {lang, pct} } } — the most spoken language per area/year."""
+    dominant = {}
+    for area, years in area_lang.items():
+        dominant[area] = {}
+        for y, entries in years.items():
+            total = sum(sp for _, sp in entries)
+            if total == 0:
+                continue
+            li_max, sp_max = max(entries, key=lambda x: x[1])
+            dominant[area][y] = {"lang": lang_names[li_max], "pct": round(sp_max / total * 100, 2)}
+    return dominant
+
+
+def read_diversity(path, area_col, dominant):
+    """-> { area: { year: [richness, expShannon, invSimpson, lexDivQ0, lexDivQ1, lexDivQ2, domLangIdx, domPct] } }"""
+    out = defaultdict(dict)
+    with open(path) as f:
+        for row in csv.DictReader(f):
+            area, y = row[area_col], row['year']
+            dom = dominant.get(area, {}).get(y, {})
+            out[area][y] = [
+                int(float(row['richness'])),
+                round(float(row['exp_shannon']), 3),
+                round(float(row['inv_simpson']), 3),
+                round(float(row['lex_div_q_0']), 3),
+                round(float(row['lex_div_q_1']), 3),
+                round(float(row['lex_div_q_2']), 3),
+                lang_index.get(dom.get("lang")),
+                dom.get("pct"),
+            ]
+    return out
+
+
+# ---------- 2. Municipal level ----------
+muni_lang = read_speakers(f"{SRC}/full_time_series_speakers.csv", "municipality")
+write_json("languages_by_municipality.json", muni_lang)
+
+diversity = read_diversity(f"{SRC}/diversity_time_series.csv", "municipality", compute_dominant(muni_lang))
+write_json("diversity_by_municipality.json", diversity)
 
 # ---------- 3. National (Finland) per-year language speakers ----------
 national_lang = defaultdict(lambda: defaultdict(int))
@@ -45,55 +106,14 @@ for m, years in muni_lang.items():
         for li, sp in entries:
             national_lang[y][li] += sp
 
-national_lang_out = {y: sorted(d.items(), key=lambda x: -x[1]) for y, d in national_lang.items()}
-with open(f"{OUT}/national_languages.json", "w") as f:
-    json.dump(national_lang_out, f, separators=(",", ":"))
+write_json("national_languages.json",
+           {y: sorted(d.items(), key=lambda x: -x[1]) for y, d in national_lang.items()})
 
-# ---------- 4. Diversity per municipality per year (+ dominant language) ----------
-# first compute dominant language & percent per municipality/year from muni_lang
-dominant = {}
-for m, years in muni_lang.items():
-    dominant[m] = {}
-    for y, entries in years.items():
-        total = sum(sp for _, sp in entries)
-        if total == 0:
-            continue
-        li_max, sp_max = max(entries, key=lambda x: x[1])
-        dominant[m][y] = {
-            "lang": lang_names[li_max],
-            "pct": round(sp_max / total * 100, 2)
-        }
-
-diversity = defaultdict(dict)
-with open(f"{SRC}/diversity_time_series.csv") as f:
-    r = csv.DictReader(f)
-    for row in r:
-        m = row['municipality']
-        y = row['year']
-        dom = dominant.get(m, {}).get(y, {})
-        dom_idx = lang_index.get(dom.get("lang"))
-        # compact array: [richness, expShannon, invSimpson, lexDivQ0, lexDivQ1, lexDivQ2, domLangIdx, domPct]
-        diversity[m][y] = [
-            int(float(row['richness'])),
-            round(float(row['exp_shannon']), 3),
-            round(float(row['inv_simpson']), 3),
-            round(float(row['lex_div_q_0']), 3),
-            round(float(row['lex_div_q_1']), 3),
-            round(float(row['lex_div_q_2']), 3),
-            dom_idx,
-            dom.get("pct"),
-        ]
-
-with open(f"{OUT}/diversity_by_municipality.json", "w") as f:
-    json.dump(diversity, f, separators=(",", ":"))
-
-# ---------- 5. National diversity time series ----------
+# ---------- 4. National diversity time series ----------
 national_div = {}
 with open(f"{SRC}/diversity_finland_time_series.csv") as f:
-    r = csv.DictReader(f)
-    for row in r:
-        y = row['year']
-        national_div[y] = {
+    for row in csv.DictReader(f):
+        national_div[row['year']] = {
             "richness": int(float(row['richness'])),
             "expShannon": round(float(row['exp_shannon']), 4),
             "invSimpson": round(float(row['inv_simpson']), 4),
@@ -101,40 +121,63 @@ with open(f"{SRC}/diversity_finland_time_series.csv") as f:
             "lexDivQ1": round(float(row['lex_div_q_1']), 4),
             "lexDivQ2": round(float(row['lex_div_q_2']), 4),
         }
+write_json("national_diversity.json", national_div)
 
-with open(f"{OUT}/national_diversity.json", "w") as f:
-    json.dump(national_div, f, separators=(",", ":"))
+# ---------- 5. Regional level (one level above municipalities) ----------
+# Same structure as the municipal files, keyed by region name.
+region_lang = read_speakers(f"{SRC}/regional_time_series_speakers.csv", "region")
+write_json("languages_by_region.json", region_lang)
 
-# ---------- 6. Meta (years, municipalities, palette scaffolding) ----------
+region_diversity = read_diversity(f"{SRC}/diversity_region_time_series.csv", "region", compute_dominant(region_lang))
+write_json("diversity_by_region.json", region_diversity)
+
+# ---------- 6. Meta ----------
 years = sorted(national_div.keys())
 municipalities = sorted(muni_lang.keys())
+regions = sorted(region_lang.keys())
+
+# Fail loudly on inconsistencies that would otherwise show up as grey polygons
+# or empty charts in the app.
+if set(region_diversity.keys()) != set(regions):
+    sys.exit("Region names differ between the regional speakers and diversity CSVs.")
+for y in years:
+    missing = [r for r in regions if y not in region_lang[r] or y not in region_diversity[r]]
+    if missing:
+        sys.exit(f"Year {y} is missing for regions: {missing}")
+
+region_geo = os.path.join(GEO, "region_geometries.geojson")
+if os.path.exists(region_geo):
+    with open(region_geo) as f:
+        geo_names = {ft["properties"]["region"] for ft in json.load(f)["features"]}
+    if geo_names != set(regions):
+        sys.exit(f"Region names in region_geometries.geojson don't match the data.\n"
+                 f"  only in geojson: {sorted(geo_names - set(regions))}\n"
+                 f"  only in data:    {sorted(set(regions) - geo_names)}")
+else:
+    print("WARNING: public/geo/region_geometries.geojson not found - skipped name check.")
 
 # Languages that are ever the dominant language somewhere, in some year —
-# mirrors mst_spkn_langs in the R app, used to size the map's categorical palette.
+# mirrors mst_spkn_langs in the R app.
 ever_dominant = sorted({
     lang_names[row[6]]
     for years_map in diversity.values()
     for row in years_map.values()
     if row[6] is not None
 })
-
 families = sorted(set(lang_family.values()))
 
-with open(f"{OUT}/meta.json", "w") as f:
-    json.dump(
-        {
-            "years": years,
-            "municipalities": municipalities,
-            "everDominantLanguages": ever_dominant,
-            "families": families,
-        },
-        f,
-        separators=(",", ":"),
-    )
+write_json("meta.json", {
+    "years": years,
+    "municipalities": municipalities,
+    "regions": regions,
+    "everDominantLanguages": ever_dominant,
+    "families": families,
+})
 
 print("Done.")
 print("languages:", len(languages_json))
 print("municipalities:", len(municipalities))
+print("regions:", len(regions))
 print("years:", years[0], "-", years[-1])
 print("ever-dominant languages:", len(ever_dominant), ever_dominant)
 print("families:", len(families))

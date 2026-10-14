@@ -139,8 +139,7 @@ export default function Treemap({ rows, familyPalette, title }) {
       )}
 
       <div className="treemap__note">
-        Color shows language family. Box sizes are scaled so that small languages stay readable;
-        hover for exact shares.
+        The area of each rectangle is proportional to the langauges relative abundance. The colour indicates language family. If the text is not visible, you can hoer over it.
       </div>
     </figure>
   );

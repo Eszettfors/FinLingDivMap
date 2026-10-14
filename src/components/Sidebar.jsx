@@ -1,10 +1,13 @@
 import { MEASURES } from "../utils/format";
+import { LEVEL_OPTIONS } from "../utils/levels";
 import SegmentedControl from "./SegmentedControl";
 import YearSlider from "./YearSlider";
 import LanguagePicker from "./LanguagePicker";
 import LanguageTable from "./LanguageTable";
 
 export default function Sidebar({
+  level,
+  onLevelChange,
   years,
   measure,
   onMeasureChange,
@@ -19,11 +22,21 @@ export default function Sidebar({
   onVisChange,
   tableMode,
   onTableModeChange,
-  clickedMunicipality,
+  clickedArea,
   tableRows,
 }) {
   return (
     <aside className="sidebar">
+      <section className="control-block">
+        <label className="control-label">Geographic level</label>
+        <SegmentedControl
+          name="Geographic level"
+          value={level.key}
+          onChange={onLevelChange}
+          options={LEVEL_OPTIONS}
+        />
+      </section>
+
       <section className="control-block">
         <label className="control-label" htmlFor="measure-select">
           Select a measure to visualize:
@@ -89,13 +102,13 @@ export default function Sidebar({
           onChange={onTableModeChange}
             options={[
               { value: "global", label: "Finland" },
-              { value: "municipality", label: clickedMunicipality || "Municipality" },
+              { value: "area", label: clickedArea || level.label },
             ]}
           />
 
         <LanguageTable
           rows={tableRows}
-          caption={tableMode === "global" ? "Languages spoken across Finland" : `Languages spoken in ${clickedMunicipality || ""}`}
+          caption={tableMode === "global" ? "Languages spoken across Finland" : `Languages spoken in ${clickedArea || ""}`}
         />
       </section>
     </aside>

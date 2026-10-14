@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import { readDiversityRow, fmtMeasure, fmtPct } from "../utils/format";
 import { makeDiversityScale, dominantLanguageColor } from "../utils/colors";
@@ -9,27 +9,35 @@ const FINLAND_ZOOM = 5;
 
 export default function MapPanel({
   geo,
+  level,
   mode,
   measure,
   year,
-  diversityByMunicipality,
-  languagesByMunicipality,
+  diversityByArea,
+  languagesByArea,
   languages,
   selectedLanguage,
-  clickedMunicipality,
-  onMunicipalityClick,
+  clickedArea,
+  onAreaClick,
   dominantLanguagesInView,
 }) {
+  // Leaflet binds the handlers in onEachFeature once, when the layer is
+  // created, so they would see a stale clickedArea. They read it from this ref.
+  const clickedRef = useRef(clickedArea);
+  useEffect(() => {
+    clickedRef.current = clickedArea;
+  }, [clickedArea]);
+
   // ---- Diversity-measure view ----
   const diversityValues = useMemo(() => {
     if (mode !== "diversity") return [];
     return geo.features
       .map((f) => {
-        const row = diversityByMunicipality[f.properties.mncplty]?.[year];
+        const row = diversityByArea[f.properties[level.nameProp]]?.[year];
         return readDiversityRow(row, measure.key);
       })
       .filter((v) => typeof v === "number");
-  }, [geo, diversityByMunicipality, year, measure, mode]);
+  }, [geo, level, diversityByArea, year, measure, mode]);
 
   const diversityScale = useMemo(
     () => makeDiversityScale(diversityValues),
@@ -45,26 +53,26 @@ export default function MapPanel({
   const languageValues = useMemo(() => {
     if (mode !== "language") return [];
     return geo.features.map((f) => {
-      const entries = languagesByMunicipality[f.properties.mncplty]?.[year] || [];
+      const entries = languagesByArea[f.properties[level.nameProp]]?.[year] || [];
       const total = entries.reduce((s, [, sp]) => s + sp, 0);
       const found = entries.find(([idx]) => idx === langIndex);
       return total && found ? (found[1] / total) * 100 : 0;
     });
-  }, [geo, languagesByMunicipality, year, langIndex, mode]);
+  }, [geo, level, languagesByArea, year, langIndex, mode]);
 
   const languageScale = useMemo(() => makeDiversityScale(languageValues), [languageValues]);
 
   function styleFeature(feature) {
-    const mncp = feature.properties.mncplty;
-    const isSelected = mncp === clickedMunicipality;
+    const area = feature.properties[level.nameProp];
+    const isSelected = area === clickedArea;
     const base = {
-      weight: isSelected ? 2.5 : 0.6,
-      color: isSelected ? "var(--ink)" : "#7d8a83",
+      weight: isSelected ? 2.5 : level.borderWeight,
+      color: isSelected ? "var(--ink)" : "#0d0e0d",
       fillOpacity: 0.82,
     };
 
     if (mode === "diversity") {
-      const row = diversityByMunicipality[mncp]?.[year];
+      const row = diversityByArea[area]?.[year];
       if (measure.key === "dominantLanguage") {
         const domIdx = row?.[6];
         const domPct = row?.[7];
@@ -80,7 +88,7 @@ export default function MapPanel({
     }
 
     // language mode
-    const entries = languagesByMunicipality[mncp]?.[year] || [];
+    const entries = languagesByArea[area]?.[year] || [];
     const total = entries.reduce((s, [, sp]) => s + sp, 0);
     const found = entries.find(([idx]) => idx === langIndex);
     const pct = total && found ? (found[1] / total) * 100 : 0;
@@ -88,41 +96,44 @@ export default function MapPanel({
   }
 
   function onEachFeature(feature, layer) {
-    const mncp = feature.properties.mncplty;
+    const area = feature.properties[level.nameProp];
     layer.on({
-      click: () => onMunicipalityClick(mncp),
+      click: () => onAreaClick(area),
       mouseover: (e) => e.target.setStyle({ weight: 2, color: "var(--ink)" }),
       mouseout: (e) => {
-        if (mncp !== clickedMunicipality) {
-          e.target.setStyle({ weight: 0.6, color: "#7d8a83" });
-        }
+        const selected = area === clickedRef.current;
+        e.target.setStyle(
+          selected
+            ? { weight: 2.5, color: "var(--ink)" }
+            : { weight: level.borderWeight, color: "#0e0e0e" }
+        );
       },
     });
 
     let label;
     if (mode === "diversity") {
-      const row = diversityByMunicipality[mncp]?.[year];
+      const row = diversityByArea[area]?.[year];
       if (measure.key === "dominantLanguage") {
         const domIdx = row?.[6];
         const domPct = row?.[7];
         label = domIdx != null
-          ? `${mncp}: ${languages[domIdx].name} (${fmtPct(domPct)})`
-          : `${mncp}: no data`;
+          ? `${area}: ${languages[domIdx].name} (${fmtPct(domPct)})`
+          : `${area}: no data`;
       } else {
         const value = readDiversityRow(row, measure.key);
-        label = `${mncp}: ${fmtMeasure(value)}`;
+        label = `${area}: ${fmtMeasure(value)}`;
       }
     } else {
-      const entries = languagesByMunicipality[mncp]?.[year] || [];
+      const entries = languagesByArea[area]?.[year] || [];
       const total = entries.reduce((s, [, sp]) => s + sp, 0);
       const found = entries.find(([idx]) => idx === langIndex);
       const pct = total && found ? (found[1] / total) * 100 : 0;
-      label = `${mncp}: ${fmtPct(pct)} ${selectedLanguage}`;
+      label = `${area}: ${fmtPct(pct)} ${selectedLanguage}`;
     }
     layer.bindTooltip(label, { sticky: true });
   }
 
-  const geoKey = `${mode}-${measure.key}-${year}-${selectedLanguage}`;
+  const geoKey = `${level.key}-${mode}-${measure.key}-${year}-${selectedLanguage}`;
 
   return (
     <div className="map-shell">

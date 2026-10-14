@@ -135,6 +135,13 @@ a {
   font-family: var(--font-body);
 }
 
+/* Clicking an area focuses its SVG path, and the browser then draws a focus
+   box around the path's bounding box. The paths aren't keyboard-operable, so
+   the box adds nothing - the selected area is already outlined by the map. */
+.leaflet-container path.leaflet-interactive:focus {
+  outline: none;
+}
+
 .leaflet-popup-content-wrapper,
 .leaflet-tooltip {
   background: var(--ink);

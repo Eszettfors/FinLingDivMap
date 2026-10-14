@@ -3,6 +3,7 @@ import { useAtlasData } from "./hooks/useAtlasData";
 import { buildFamilyPalette } from "./utils/colors";
 import { MEASURES, readDiversityRow } from "./utils/format";
 import { languageRowsFor, topLanguagesTimeSeries } from "./utils/languages";
+import { LEVELS } from "./utils/levels";
 import "./App.css";
 
 import Header from "./components/Header";
@@ -20,13 +21,14 @@ export default function App() {
   const { status, error, data } = useAtlasData();
 
   const [view, setView] = useState("map");
+  const [levelKey, setLevelKey] = useState("municipality");
   const [measure, setMeasure] = useState(MEASURES[0]); // Dominant Language
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [mapMode, setMapMode] = useState("diversity");
   const [selectedLanguage, setSelectedLanguage] = useState(DEFAULT_LANGUAGE);
   const [vis, setVis] = useState("treemap");
   const [tableMode, setTableMode] = useState("global");
-  const [clickedMunicipality, setClickedMunicipality] = useState(null);
+  const [clickedArea, setClickedArea] = useState(null);
 
   // Once data lands, make sure the default year/language actually exist.
   useEffect(() => {
@@ -38,24 +40,37 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
+  // The geographic level currently on the map, and its data (geometry,
+  // diversity rows, language rows). Everything below reads from these.
+  const level = LEVELS[levelKey];
+  const levelData = data ? data.levels[levelKey] : null;
+
   const familyPalette = useMemo(
     () => (data ? buildFamilyPalette(data.families) : {}),
     [data]
   );
 
   const dominantLanguagesInView = useMemo(() => {
-    if (!data) return [];
+    if (!levelData) return [];
     const set = new Set();
-    Object.values(data.diversityByMunicipality).forEach((years) => {
+    Object.values(levelData.diversity).forEach((years) => {
       const row = years[year];
       if (row && row[6] != null) set.add(data.languages[row[6]].name);
     });
     return [...set].sort();
-  }, [data, year]);
+  }, [data, levelData, year]);
 
-  function handleMunicipalityClick(name) {
-    setClickedMunicipality(name);
-    setTableMode("municipality");
+  function handleAreaClick(name) {
+    setClickedArea(name);
+    setTableMode("area");
+  }
+
+  // A selected municipality means nothing at region level (and vice versa),
+  // so switching level clears the selection.
+  function handleLevelChange(key) {
+    setLevelKey(key);
+    setClickedArea(null);
+    setTableMode("global");
   }
 
   const tableRows = useMemo(() => {
@@ -63,34 +78,34 @@ export default function App() {
     if (tableMode === "global") {
       return languageRowsFor(data.nationalLanguages[year], data.languages);
     }
-    if (!clickedMunicipality) return [];
+    if (!clickedArea) return [];
     return languageRowsFor(
-      data.languagesByMunicipality[clickedMunicipality]?.[year],
+      levelData.languages[clickedArea]?.[year],
       data.languages
     );
-  }, [data, tableMode, clickedMunicipality, year]);
+  }, [data, levelData, tableMode, clickedArea, year]);
 
   const treemapRows = useMemo(() => {
-    if (!data || !clickedMunicipality) return [];
+    if (!levelData || !clickedArea) return [];
     return languageRowsFor(
-      data.languagesByMunicipality[clickedMunicipality]?.[year],
+      levelData.languages[clickedArea]?.[year],
       data.languages
     );
-  }, [data, clickedMunicipality, year]);
+  }, [data, levelData, clickedArea, year]);
 
   const timeSeriesData = useMemo(() => {
-    if (!data || !clickedMunicipality) return null;
+    if (!levelData || !clickedArea) return null;
     if (measure.key === "dominantLanguage") {
-      const yearsMap = data.languagesByMunicipality[clickedMunicipality] || {};
+      const yearsMap = levelData.languages[clickedArea] || {};
       return {
         kind: "area",
         ...topLanguagesTimeSeries(yearsMap, data.languages, data.years, 10),
       };
     }
-    const muniByYear = data.diversityByMunicipality[clickedMunicipality] || {};
+    const muniByYear = levelData.diversity[clickedArea] || {};
     const muniValues = data.years.map((y) => readDiversityRow(muniByYear[y], measure.key));
     return { kind: "line", muniValues };
-  }, [data, clickedMunicipality, measure]);
+  }, [data, levelData, clickedArea, measure]);
 
   if (status === "loading") {
     return (
@@ -115,13 +130,15 @@ export default function App() {
         view={view}
         onViewChange={setView}
         yearsCount={data.years.length}
-        municipalityCount={data.municipalities.length}
+        municipalityCount={data.levels.municipality.names.length}
         languageCount={data.languages.length}
       />
 
       {view === "map" ? (
         <main className="app-main">
           <Sidebar
+            level={level}
+            onLevelChange={handleLevelChange}
             years={data.years}
             measure={measure}
             onMeasureChange={setMeasure}
@@ -136,54 +153,55 @@ export default function App() {
             onVisChange={setVis}
             tableMode={tableMode}
             onTableModeChange={setTableMode}
-            clickedMunicipality={clickedMunicipality}
+            clickedArea={clickedArea}
             tableRows={tableRows}
           />
 
           <div className="main-panel">
             <MapPanel
-                geo={data.geo}
+                geo={levelData.geo}
+                level={level}
                 mode={mapMode}
                 measure={measure}
                 year={year}
-                diversityByMunicipality={data.diversityByMunicipality}
-                languagesByMunicipality={data.languagesByMunicipality}
+                diversityByArea={levelData.diversity}
+                languagesByArea={levelData.languages}
                 languages={data.languages}
                 selectedLanguage={selectedLanguage}
-                clickedMunicipality={clickedMunicipality}
-                onMunicipalityClick={handleMunicipalityClick}
+                clickedArea={clickedArea}
+                onAreaClick={handleAreaClick}
                 dominantLanguagesInView={dominantLanguagesInView}
               /> 
 
             <div className="detail-panel">
-              {!clickedMunicipality && (
+              {!clickedArea && (
                 <p className="empty-note empty-note--panel">
-                  Click a municipality on the map to see its language treemap and diversity trend.
+                  Click a {level.label.toLowerCase()} on the map to see its language treemap and diversity trend.
                 </p>
               )}
 
-              {clickedMunicipality && vis === "treemap" && (
+              {clickedArea && vis === "treemap" && (
                 <Treemap
                   rows={treemapRows}
                   familyPalette={familyPalette}
-                  title={`Language distribution in ${clickedMunicipality}, ${year}`}
+                  title={`Language distribution in ${clickedArea}, ${year}`}
                 />
               )}
 
-              {clickedMunicipality && vis === "ts" && timeSeriesData?.kind === "line" && (
+              {clickedArea && vis === "ts" && timeSeriesData?.kind === "line" && (
                 <TimeSeriesChart
                   years={data.years}
-                  municipalityName={clickedMunicipality}
+                  municipalityName={clickedArea}
                   muniValues={timeSeriesData.muniValues}
                   measureLabel={measure.label}
                 />
               )}
 
-              {clickedMunicipality && vis === "ts" && timeSeriesData?.kind === "area" && (
+              {clickedArea && vis === "ts" && timeSeriesData?.kind === "area" && (
                 <TopLanguagesArea
                   series={timeSeriesData.series}
                   keys={timeSeriesData.keys}
-                  municipalityName={clickedMunicipality}
+                  municipalityName={clickedArea}
                 />
               )}
             </div>
