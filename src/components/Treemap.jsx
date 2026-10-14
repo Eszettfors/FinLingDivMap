@@ -139,7 +139,7 @@ export default function Treemap({ rows, familyPalette, title }) {
       )}
 
       <div className="treemap__note">
-        The area of each rectangle is proportional to the langauges relative abundance. The colour indicates language family. If the text is not visible, you can hoer over it.
+        The area of each rectangle is proportional to the language's relative abundance. The colour indicates language family. If the text is not visible, you can hover over it.
       </div>
     </figure>
   );

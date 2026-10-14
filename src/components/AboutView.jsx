@@ -70,9 +70,14 @@ export default function AboutView() {
         <h3>Contact</h3>
         <p>
           Feel free to reach out to any of the email-adresses if you have quesitons about the dashboard or the data:
-          <p> hannes.essfors@tuwien.ac.at</p>
-           <p>hannes.essfors@univie.ac.at</p>
-           <p> hannes.essfors@gmail.com </p>
+          <p>
+            hannes.essfors@tuwien.ac.at <br></br>
+            hannes.essfors@univie.ac.at <br></br>
+            hannes.essfors@gmail.com <br></br>
+            <a href="https://eszettfors.github.io/" target="_blank" rel="noreferrer">
+            https://eszettfors.github.io/
+            </a>
+          </p>
         </p>
 
       </article>
