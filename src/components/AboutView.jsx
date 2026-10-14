@@ -10,14 +10,15 @@ export default function AboutView() {
         <p>
           On the left hand side, you can select a measure to visualize. Dominant language shows the most widely spoken L1 in each municipality for a given year. 
           The intensity of the color indicates the magnitude of the proportion: a darker color corresponds to more dominance. The other measures summarize linguistic diversity according to 
-          according to the Leinster–Cobbold framework (2012); for more detail, see Essfors (2025) below. In short: diversity is maximized when a municipality has many different languages which are evenly distributed.
+          according to the Leinster–Cobbold framework (2012); for more detail, see Essfors (2025) below. In short: diversity is maximized when a municipality has many different languages which are evenly distributed. The term lexical diversity means that diversity is "weighted" by lexical similarity of the languages. If two languages are very similar, they contribute less to diversity, e.g., English and Swedish, compared to if they are very different, e.g., Finnish and Swedish.
           
         </p>
 
         <p>
-          By clicking on a municipality on the map, you can view a visualization of either: the distribution of languages (treemap) or the change in diversity over time. The chosen visualization
+          The dashboard contains data aggregated on two spatial scales: municipalities and regions. You can select which to use with a toggle button. The municipalities follow the Statistics Finland classification of 2025, the regions follow that of 2026. The spatial boundary data stems from the National Land Survey of Finland in 2022.
+          By clicking on a municipality/region on the map, you can view a visualization of either: the distribution of languages (treemap) or the change in diversity over time. The chosen visualization
           can be regulated by clicking the buttons under "Visualization" on the left hand side. There are two type of maps you can choose from using the "Map type" buttons: "Diversity measure" visualizes the magniuted of the selected diversity meaure;
-          "Langage share" the proportion of speakers in a municipality for a selected language. To select a language, you can use the dropdown menu or serach for a language.
+          "Langage share" the proportion of speakers in a municipality/region for a selected language. To select a language, you can use the dropdown menu or serach for a language.
         </p>
 
         <h3>About the data</h3>
@@ -34,14 +35,17 @@ export default function AboutView() {
           Attribution 4.0 International license. 
 
           The dataset can be accessed through Zenodo:{" "}
-          <a href="https://zenodo.org/records/18257720" target="_blank" rel="noreferrer">
-            zenodo.org/records/18257720
+          <a href="https://zenodo.org/records/23187286" target="_blank" rel="noreferrer">
+            https://zenodo.org/records/23187286
           </a>
           .
         </p>
         <h3>Citing the dataset</h3>
         <p className="body about__citation">
-          Essfors, H. (2026). FinLingDiv (1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.18257720
+          Essfors, H. (2026). FinLingDiv (1.1.1) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.23187286
+        </p>
+        <p>
+          If you are using the data, also make sure to credit Statistics Finland.
         </p>
         <h3>Citing this page</h3>
         <p>
