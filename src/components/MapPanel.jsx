@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 import { readDiversityRow, fmtMeasure, fmtPct } from "../utils/format";
-import { makeDiversityScale, dominantLanguageColor } from "../utils/colors";
+import { makeDiversityScale, languageColor, NO_LANGUAGE_COLOR } from "../utils/colors";
 import { CategoricalLegend, NumericLegend } from "./MapLegend";
 
 const FINLAND_CENTER = [64.9, 26.2];
@@ -19,7 +19,7 @@ export default function MapPanel({
   selectedLanguage,
   clickedArea,
   onAreaClick,
-  dominantLanguagesInView,
+  legendItems,
 }) {
   // Leaflet binds the handlers in onEachFeature once, when the layer is
   // created, so they would see a stale clickedArea. They read it from this ref.
@@ -67,20 +67,26 @@ export default function MapPanel({
     const isSelected = area === clickedArea;
     const base = {
       weight: isSelected ? 2.5 : level.borderWeight,
-      color: isSelected ? "var(--ink)" : "#0d0e0d",
+      color: isSelected ? "var(--ink)" : "#7d8a83",
       fillOpacity: 0.82,
     };
 
     if (mode === "diversity") {
       const row = diversityByArea[area]?.[year];
-      if (measure.key === "dominantLanguage") {
-        const domIdx = row?.[6];
-        const domPct = row?.[7];
-        const name = domIdx != null ? languages[domIdx].name : null;
+      if (measure.kind === "categorical") {
+        const langIdx = row?.[measure.index];
+        const pct = row?.[measure.pctIndex];
+        if (langIdx == null) {
+          // e.g. an area where only one language is recorded has no second language
+          return { ...base, fillColor: NO_LANGUAGE_COLOR, fillOpacity: 0.5 };
+        }
         return {
           ...base,
-          fillColor: name ? dominantLanguageColor(name) : "#c9c9c9",
-          fillOpacity: domPct != null ? Math.max(0.25, domPct / 100) : 0.2,
+          fillColor: languageColor(languages[langIdx].name),
+          // The dominant language fades with a lower share. Second languages
+          // have small shares by nature, so they are drawn at full strength to
+          // stay readable (the share is in the tooltip).
+          fillOpacity: measure.shadeByShare ? Math.max(0.25, pct / 100) : 0.85,
         };
       }
       const value = readDiversityRow(row, measure.key);
@@ -105,7 +111,7 @@ export default function MapPanel({
         e.target.setStyle(
           selected
             ? { weight: 2.5, color: "var(--ink)" }
-            : { weight: level.borderWeight, color: "#0e0e0e" }
+            : { weight: level.borderWeight, color: "#7d8a83" }
         );
       },
     });
@@ -113,12 +119,11 @@ export default function MapPanel({
     let label;
     if (mode === "diversity") {
       const row = diversityByArea[area]?.[year];
-      if (measure.key === "dominantLanguage") {
-        const domIdx = row?.[6];
-        const domPct = row?.[7];
-        label = domIdx != null
-          ? `${area}: ${languages[domIdx].name} (${fmtPct(domPct)})`
-          : `${area}: no data`;
+      if (measure.kind === "categorical") {
+        const langIdx = row?.[measure.index];
+        label = langIdx != null
+          ? `${area}: ${languages[langIdx].name} (${fmtPct(row[measure.pctIndex])})`
+          : `${area}: ${measure.noneLabel?.toLowerCase() ?? "no data"}`;
       } else {
         const value = readDiversityRow(row, measure.key);
         label = `${area}: ${fmtMeasure(value)}`;
@@ -152,14 +157,10 @@ export default function MapPanel({
         <GeoJSON key={geoKey} data={geo} style={styleFeature} onEachFeature={onEachFeature} />
       </MapContainer>
 
-      {mode === "diversity" && measure.key === "dominantLanguage" && (
-        <CategoricalLegend
-          title="Dominant language"
-          items={dominantLanguagesInView}
-          colorFn={dominantLanguageColor}
-        />
+      {mode === "diversity" && measure.kind === "categorical" && (
+        <CategoricalLegend title={measure.label} items={legendItems} />
       )}
-      {mode === "diversity" && measure.key !== "dominantLanguage" && diversityValues.length > 0 && (
+      {mode === "diversity" && measure.kind !== "categorical" && diversityValues.length > 0 && (
         <NumericLegend
           title={measure.label}
           min={Math.min(...diversityValues)}

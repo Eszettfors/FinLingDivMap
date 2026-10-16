@@ -2,18 +2,35 @@ import { hcl } from "d3-color";
 import { interpolateYlGnBu } from "d3-scale-chromatic";
 import { scaleSequential } from "d3-scale";
 
-// The three languages that have ever been the single most-spoken language in
-// any Finnish municipality, 1990-2025 — mirrors custom_palette in the R app.
-// (Every other language never "wins" a municipality outright, so the map's
-// categorical legend never needs more than these three.)
-export const DOMINANT_LANGUAGE_COLORS = {
+// Colours for the categorical language maps ("Dominant" and "Second dominant").
+//
+// Finnish, Sami and Swedish are the only languages that ever come out on top
+// in a municipality, so the dominant map needs just these three. The second
+// most spoken language varies much more (28 different languages over the
+// years), but a handful cover nearly everything - in 2025 Russian, Ukrainian,
+// Swedish, Estonian, Finnish and Arabic are second in ~95% of municipalities.
+// Those get a colour of their own (ColorBrewer "Paired" hues, chosen to stay
+// apart from the first three); every other language shares one grey, and the
+// tooltip still names it. Add a line here to give another language a colour.
+export const LANGUAGE_COLORS = {
   Finnish: "#1f78b4",
   Sami: "#e31a1c",
   Swedish: "#ffda03",
+  Russian: "#6a3d9a",
+  Estonian: "#33a02c",
+  Ukrainian: "#ff7f00",
+  Arabic: "#b15928",
 };
 
-export function dominantLanguageColor(name) {
-  return DOMINANT_LANGUAGE_COLORS[name] || "#9aa39d";
+export const OTHER_LANGUAGE_COLOR = "#8a8f8c"; // languages without a colour above
+export const NO_LANGUAGE_COLOR = "#d4d8d5"; // areas with no language to show
+
+export function hasOwnColor(name) {
+  return Object.hasOwn(LANGUAGE_COLORS, name);
+}
+
+export function languageColor(name) {
+  return hasOwnColor(name) ? LANGUAGE_COLORS[name] : OTHER_LANGUAGE_COLOR;
 }
 
 let cachedFamilyPalette = null;

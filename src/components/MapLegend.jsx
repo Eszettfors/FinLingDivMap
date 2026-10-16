@@ -1,14 +1,15 @@
 import { fmtMeasure } from "../utils/format";
 
-export function CategoricalLegend({ title, items, colorFn }) {
+// items: [{ label, color }]
+export function CategoricalLegend({ title, items }) {
   return (
     <div className="map-legend">
       <div className="map-legend__title">{title}</div>
       <div className="map-legend__items map-legend__items--wrap">
-        {items.map((name) => (
-          <span key={name} className="map-legend__chip">
-            <i style={{ background: colorFn(name) }} />
-            {name}
+        {items.map(({ label, color }) => (
+          <span key={label} className="map-legend__chip">
+            <i style={{ background: color }} />
+            {label}
           </span>
         ))}
       </div>

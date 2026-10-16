@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAtlasData } from "./hooks/useAtlasData";
-import { buildFamilyPalette } from "./utils/colors";
+import {
+  buildFamilyPalette,
+  languageColor,
+  hasOwnColor,
+  OTHER_LANGUAGE_COLOR,
+  NO_LANGUAGE_COLOR,
+} from "./utils/colors";
 import { MEASURES, readDiversityRow } from "./utils/format";
 import { languageRowsFor, topLanguagesTimeSeries } from "./utils/languages";
 import { LEVELS } from "./utils/levels";
@@ -50,15 +56,32 @@ export default function App() {
     [data]
   );
 
-  const dominantLanguagesInView = useMemo(() => {
-    if (!levelData) return [];
-    const set = new Set();
+  // Entries for the categorical map legend (Dominant / Second dominant
+  // language): one per language present at this level and year. Languages
+  // without a colour of their own share an "Other languages" entry, and areas
+  // with no language to show (e.g. no second language) get an entry of their own.
+  const legendItems = useMemo(() => {
+    if (!levelData || measure.kind !== "categorical") return [];
+    const named = new Set();
+    let hasOther = false;
+    let hasNone = false;
     Object.values(levelData.diversity).forEach((years) => {
       const row = years[year];
-      if (row && row[6] != null) set.add(data.languages[row[6]].name);
+      if (!row) return;
+      const langIdx = row[measure.index];
+      if (langIdx == null) {
+        hasNone = true;
+        return;
+      }
+      const name = data.languages[langIdx].name;
+      if (hasOwnColor(name)) named.add(name);
+      else hasOther = true;
     });
-    return [...set].sort();
-  }, [data, levelData, year]);
+    const items = [...named].sort().map((name) => ({ label: name, color: languageColor(name) }));
+    if (hasOther) items.push({ label: "Other languages", color: OTHER_LANGUAGE_COLOR });
+    if (hasNone && measure.noneLabel) items.push({ label: measure.noneLabel, color: NO_LANGUAGE_COLOR });
+    return items;
+  }, [data, levelData, measure, year]);
 
   function handleAreaClick(name) {
     setClickedArea(name);
@@ -95,7 +118,7 @@ export default function App() {
 
   const timeSeriesData = useMemo(() => {
     if (!levelData || !clickedArea) return null;
-    if (measure.key === "dominantLanguage") {
+    if (measure.kind === "categorical") {
       const yearsMap = levelData.languages[clickedArea] || {};
       return {
         kind: "area",
@@ -170,7 +193,7 @@ export default function App() {
                 selectedLanguage={selectedLanguage}
                 clickedArea={clickedArea}
                 onAreaClick={handleAreaClick}
-                dominantLanguagesInView={dominantLanguagesInView}
+                legendItems={legendItems}
               /> 
 
             <div className="detail-panel">

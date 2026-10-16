@@ -59,7 +59,13 @@ def read_speakers(path, area_col):
 
 
 def compute_dominant(area_lang):
-    """-> { area: { year: {lang, pct} } } — the most spoken language per area/year."""
+    """-> { area: { year: {lang, pct, second, secondPct} } }
+
+    The most and second most spoken language per area/year. `second` is None
+    when only one language is recorded. A tie for second place is broken by
+    language index (i.e. alphabetically) so the result never depends on the
+    row order of the CSV.
+    """
     dominant = {}
     for area, years in area_lang.items():
         dominant[area] = {}
@@ -68,12 +74,23 @@ def compute_dominant(area_lang):
             if total == 0:
                 continue
             li_max, sp_max = max(entries, key=lambda x: x[1])
-            dominant[area][y] = {"lang": lang_names[li_max], "pct": round(sp_max / total * 100, 2)}
+            rest = [e for e in entries if e[0] != li_max and e[1] > 0]
+            second, second_pct = None, None
+            if rest:
+                li_2nd, sp_2nd = max(rest, key=lambda x: (x[1], -x[0]))
+                second, second_pct = lang_names[li_2nd], round(sp_2nd / total * 100, 2)
+            dominant[area][y] = {
+                "lang": lang_names[li_max],
+                "pct": round(sp_max / total * 100, 2),
+                "second": second,
+                "secondPct": second_pct,
+            }
     return dominant
 
 
 def read_diversity(path, area_col, dominant):
-    """-> { area: { year: [richness, expShannon, invSimpson, lexDivQ0, lexDivQ1, lexDivQ2, domLangIdx, domPct] } }"""
+    """-> { area: { year: [richness, expShannon, invSimpson, lexDivQ0, lexDivQ1, lexDivQ2,
+                           domLangIdx, domPct, secondLangIdx, secondPct] } }"""
     out = defaultdict(dict)
     with open(path) as f:
         for row in csv.DictReader(f):
@@ -88,6 +105,8 @@ def read_diversity(path, area_col, dominant):
                 round(float(row['lex_div_q_2']), 3),
                 lang_index.get(dom.get("lang")),
                 dom.get("pct"),
+                lang_index.get(dom.get("second")),  # None when there is no second language
+                dom.get("secondPct"),
             ]
     return out
 
